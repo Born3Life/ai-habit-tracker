@@ -19,6 +19,14 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
+@router.message(lambda msg: msg.text == "📝 Написать отчёт")
+async def handle_report_prompt(message: types.Message) -> None:
+    """Prompt user to write about their day."""
+    await message.answer(
+        "✍️ Напиши, что сделал сегодня.\nПару предложений — я похвалю и дам совет!"
+    )
+
+
 @router.message()
 async def handle_checkin(message: types.Message) -> None:
     user = message.from_user
@@ -30,9 +38,9 @@ async def handle_checkin(message: types.Message) -> None:
         await message.answer("Напиши /start, чтобы начать")
         return
 
-    # Skip command/keyboard messages
+    # Skip menu buttons (handled by other routers)
     text = message.text.strip()
-    if text in ("📝 Написать отчёт", "📊 Мой прогресс", "ℹ️ О статусе", "/start"):
+    if text in ("📊 Мой прогресс", "ℹ️ О статусе", "/start"):
         return
 
     # Check trial

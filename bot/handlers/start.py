@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.utils.markdown import hbold
 
 from bot.keyboards.menu import main_keyboard
-from bot.services.storage import register_user, user_info
+from bot.services.storage import get_recent_checkins, register_user, user_info
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ async def handle_start(message: types.Message) -> None:
     await message.answer(text, reply_markup=main_keyboard())
 
 
-@router.message(lambda msg: msg.text in ("ℹ️ О статусе", "📊 Мой прогресс"))
+@router.message(lambda msg: msg.text == "ℹ️ О статусе")
 async def handle_status(message: types.Message) -> None:
     user = message.from_user
     if user is None:
@@ -74,5 +74,38 @@ async def handle_status(message: types.Message) -> None:
     ]
     if not info["is_paid"] and days_left <= 0:
         lines.append("\nПробный период закончился.\n590₽/мес — продли доступ.")
+
+    await message.answer("\n".join(lines))
+
+
+@router.message(lambda msg: msg.text == "📊 Мой прогресс")
+async def handle_progress(message: types.Message) -> None:
+    user = message.from_user
+    if user is None:
+        return
+
+    info = await user_info(user.id)
+    if not info:
+        await message.answer("Ты не зарегистрирован. Напиши /start")
+        return
+
+    checkins = await get_recent_checkins(user.id, limit=7)
+
+    if not checkins:
+        await message.answer(
+            "У тебя пока нет записей.\n"
+            "Напиши, что сделал сегодня — я похвалю и дам совет!"
+        )
+        return
+
+    lines = ["📋 **Последние записи:**\n"]
+    for c in reversed(checkins[-5:]):
+        date = c["created_at"][:10]
+        text = c["text"][:60]
+        lines.append(f"▫️ {date} — {text}…")
+
+    lines.append(f"\nВсего записей: {len(checkins)}")
+    if len(checkins) >= 6:
+        lines.append("🔥 Отличная регулярность!")
 
     await message.answer("\n".join(lines))
